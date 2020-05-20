@@ -14,11 +14,12 @@ plugins {
     id("com.github.hierynomus.license") version "0.15.0"
     id("com.jfrog.artifactory") version "4.11.0"
     id("com.google.protobuf") version "0.8.10"
+    id("net.linguica.maven-settings") version "0.5"
     idea
 }
 
 group = "org.sonarsource.sonarlint.intellij"
-description = "SonarLint for IntelliJ IDEA"
+description = "SonarLint for IntelliJ CLion"
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
@@ -34,14 +35,13 @@ java {
 }
 
 intellij {
-    version = "IC-2020.1.3"
+    version = "CL-2020.1.3"
     pluginName = "sonarlint-intellij"
     updateSinceUntilBuild = false
-    setPlugins("java")
 }
 
 tasks.runPluginVerifier {
-    setIdeVersions(listOf("IC-2018.3.6", intellij.version))
+    setIdeVersions(listOf("CL-2020.1.3", intellij.version))
     setFailureLevel(
         EnumSet.complementOf(
             EnumSet.of(
@@ -72,11 +72,23 @@ tasks.runIde {
     systemProperty("sonarlint.telemetry.disabled", "true")
 }
 
+// enable loading of credentials from Maven settings.xml:
+apply(plugin="net.linguica.maven-settings")
+
 repositories {
     jcenter()
     mavenLocal()
     maven("https://repox.jfrog.io/repox/sonarsource") {
         content { excludeGroup("typescript") }
+        if (System.getenv("ARTIFACTORY_PRIVATE_USERNAME") != null) {
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+            credentials {
+                username = System.getenv("ARTIFACTORY_PRIVATE_USERNAME")
+                password = System.getenv("ARTIFACTORY_PRIVATE_PASSWORD")
+            }
+        }
     }
     ivy("https://repox.jfrog.io/repox/api/npm/npm") {
         patternLayout {
@@ -110,13 +122,8 @@ dependencies {
     testImplementation("org.eclipse.jetty:jetty-server:$jettyVersion")
     testImplementation("org.eclipse.jetty:jetty-servlet:$jettyVersion")
     testImplementation("org.eclipse.jetty:jetty-proxy:$jettyVersion")
-    "sqplugins"("org.sonarsource.java:sonar-java-plugin:6.12.0.24852@jar")
-    "sqplugins"("org.sonarsource.javascript:sonar-javascript-plugin:7.1.0.14721@jar")
-    "sqplugins"("org.sonarsource.php:sonar-php-plugin:3.15.0.7197@jar")
-    "sqplugins"("org.sonarsource.python:sonar-python-plugin:3.2.0.7856@jar")
-    "sqplugins"("org.sonarsource.slang:sonar-kotlin-plugin:1.8.2.1946@jar")
-    "sqplugins"("org.sonarsource.slang:sonar-ruby-plugin:1.8.2.1946@jar")
-    "sqplugins"("org.sonarsource.html:sonar-html-plugin:3.3.0.2534@jar")
+    "sqplugins"("com.sonarsource.cpp:sonar-cfamily-plugin:6.17.0.27551@jar")
+    //    files('/Users/mpaladin/projects/sonar-cpp/sonar-cfamily-plugin/build/libs/sonar-cfamily-plugin-6.10-SNAPSHOT-all.jar'),
     "typescript"("typescript:typescript:$typescriptVersion@tgz")
 }
 

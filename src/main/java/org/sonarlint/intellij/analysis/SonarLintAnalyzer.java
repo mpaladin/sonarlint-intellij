@@ -24,9 +24,16 @@ import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.TestSourcesFilter;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.encoding.EncodingProjectManager;
+import com.jetbrains.cidr.lang.workspace.OCResolveConfiguration;
+import com.jetbrains.cidr.lang.workspace.OCWorkspaceRunConfigurationListener;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -66,6 +73,26 @@ public class SonarLintAnalyzer {
     for (AnalysisConfigurator config : analysisConfigurators) {
       console.debug("Configuring analysis with " + config.getClass().getName());
       pluginProps.putAll(config.configure(module));
+    }
+
+    OCResolveConfiguration configuration = OCWorkspaceRunConfigurationListener.getSelectedResolveConfiguration(module.getProject());
+    if (configuration != null) {
+      CLionConfiguration.debugAllFilesConfiguration(console, module, filesToAnalyze, configuration);
+      String buildWrapperJson = CLionConfiguration.BuildWrapperJsonFactory.create(module.getProject(), configuration, filesToAnalyze);
+      console.debug(buildWrapperJson);
+
+      File buildWrapperDir;
+      try {
+        buildWrapperDir = FileUtil.createTempDirectory("cfamily", null);
+        Files.write(
+          new File(buildWrapperDir, "build-wrapper-dump.json").toPath(),
+          buildWrapperJson.getBytes(StandardCharsets.UTF_8));
+      } catch (IOException e) {
+        throw new IllegalStateException(e);
+      }
+      pluginProps.put("sonar.cfamily.build-wrapper-output", buildWrapperDir.getAbsolutePath());
+    } else {
+      console.info("OCWorkspaceRunConfigurationListener.getSelectedResolveConfiguration returned null");
     }
 
     // configure files
