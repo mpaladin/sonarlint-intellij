@@ -49,6 +49,9 @@ import org.sonarsource.sonarlint.core.client.api.standalone.StandaloneSonarLintE
 public class SonarLintEngineFactory  {
 
   private static final Language[] STANDALONE_LANGUAGES = {
+    Language.CPP,
+    Language.OBJC,
+    Language.C,
     Language.HTML,
     Language.JAVA,
     Language.JS,

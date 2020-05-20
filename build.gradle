@@ -8,6 +8,7 @@ plugins {
   id "com.github.hierynomus.license" version "0.14.0"
   id "com.jfrog.artifactory" version "4.11.0"
   id 'com.google.protobuf' version "0.8.10"
+  id 'net.linguica.maven-settings' version '0.5'
 }
 
 apply plugin: 'java'
@@ -24,10 +25,9 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 intellij {
-  version 'IC-2020.1'
+  version 'CL-2020.1'
   pluginName 'sonarlint-intellij'
   updateSinceUntilBuild false
-  plugins = ['java']
 }
 
 protobuf {
@@ -46,13 +46,25 @@ runIde {
   systemProperty 'sonarlint.telemetry.disabled', 'true'
 }
 
+// enable loading of credentials from Maven settings.xml:
+apply plugin: 'net.linguica.maven-settings'
+
 repositories {
   jcenter()
-  mavenLocal()
   maven {
-    url "https://repox.jfrog.io/repox/sonarsource"
-    content { excludeGroup("typescript") }
+    name 'sonarsource'
+    url 'https://repox.jfrog.io/repox/sonarsource/'
+    authentication {
+      // enable preemptive authentication:
+      basic(BasicAuthentication)
+    }
+    if (System.env.'ARTIFACTORY_PRIVATE_USERNAME')
+      credentials {
+        username System.env.'ARTIFACTORY_PRIVATE_USERNAME'
+        password System.env.'ARTIFACTORY_PRIVATE_PASSWORD'
+      }
   }
+  mavenLocal()
   ivy {
     url "https://repox.jfrog.io/repox/api/npm/npm"
     patternLayout {
@@ -79,6 +91,8 @@ dependencies {
   testImplementation 'org.assertj:assertj-core:3.16.1'
   testImplementation 'org.mockito:mockito-core:2.19.0'
   sqplugins (
+//    files('/Users/mpaladin/projects/sonar-cpp/sonar-cfamily-plugin/build/libs/sonar-cfamily-plugin-6.10-SNAPSHOT-all.jar'),
+    'com.sonarsource.cpp:sonar-cfamily-plugin:6.13.0.22105@jar',
     'org.sonarsource.java:sonar-java-plugin:6.6.0.22815@jar',
     'org.sonarsource.javascript:sonar-javascript-plugin:6.3.0.12464@jar',
     'org.sonarsource.php:sonar-php-plugin:3.9.0.6331@jar',
