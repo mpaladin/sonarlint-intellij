@@ -30,13 +30,15 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 import org.apache.commons.codec.binary.Hex;
+import org.jetbrains.annotations.NotNull;
 import org.sonarlint.intellij.issue.tracking.Trackable;
+import org.sonarlint.intellij.issue.tracking.TrackableIssue;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.Issue;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.codec.digest.DigestUtils.md5;
 
-public class LiveIssue implements Trackable {
+public class LiveIssue implements TrackableIssue {
   private static final AtomicLong UID_GEN = new AtomicLong();
 
   private final long uid;
@@ -91,6 +93,7 @@ public class LiveIssue implements Trackable {
     return Hex.encodeHexString(md5(content.replaceAll("[\\s]", "").getBytes(UTF_8))).hashCode();
   }
 
+  @Override
   public boolean isValid() {
     if (!psiFile.isValid()) {
       return false;
@@ -133,6 +136,7 @@ public class LiveIssue implements Trackable {
     return ruleKey;
   }
 
+  @Override
   public long uid() {
     return uid;
   }
@@ -156,6 +160,8 @@ public class LiveIssue implements Trackable {
     return type;
   }
 
+  @Override
+  @NotNull
   public String getRuleName() {
     return ruleName;
   }

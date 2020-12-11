@@ -22,13 +22,18 @@ package org.sonarlint.intellij.ui;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.tools.SimpleActionGroup;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.util.ui.tree.TreeUtil;
 import java.awt.BorderLayout;
+import java.util.Collection;
+import java.util.Map;
 import javax.swing.JPanel;
 
+import org.sonarlint.intellij.issue.LiveIssue;
+import org.sonarlint.intellij.issue.tracking.TrackableIssue;
 import org.sonarlint.intellij.messages.AnalysisResultsListener;
 import org.sonarlint.intellij.messages.StatusListener;
 import org.sonarlint.intellij.util.SonarLintActions;

@@ -19,7 +19,6 @@
  */
 package org.sonarlint.intellij.issue.hotspot
 
-import com.intellij.notification.NotificationGroup
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
