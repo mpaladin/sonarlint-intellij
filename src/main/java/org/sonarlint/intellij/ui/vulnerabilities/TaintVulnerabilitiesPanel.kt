@@ -24,16 +24,19 @@ import com.intellij.ide.OccurenceNavigator
 import com.intellij.ide.OccurenceNavigator.OccurenceInfo
 import com.intellij.ide.plugins.newui.VerticalLayout
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.ui.Splitter
+import com.intellij.tools.SimpleActionGroup
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.tree.TreeUtil
+import org.sonarlint.intellij.actions.OpenIssueInBrowserAction
 import org.sonarlint.intellij.config.Settings.getGlobalSettings
 import org.sonarlint.intellij.editor.SonarLintHighlighting
 import org.sonarlint.intellij.issue.vulnerabilities.FoundTaintVulnerabilities
@@ -56,6 +59,7 @@ import java.awt.event.FocusEvent
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.net.URL
+import javax.swing.Box
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
@@ -73,6 +77,8 @@ private const val NO_BINDING_CARD_ID = "NO_BINDING_CARD"
 private const val INVALID_BINDING_CARD_ID = "INVALID_BINDING_CARD"
 private const val NO_ISSUES_CARD_ID = "NO_ISSUES_CARD"
 private const val TREE_CARD_ID = "TREE_CARD"
+
+private const val TOOLBAR_GROUP_ID = "TaintVulnerabilities"
 
 class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindowPanel(false, true),
   OccurenceNavigator {
@@ -99,6 +105,7 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
     }
     issuesPanel.add(cards, VerticalLayout.FILL_HORIZONTAL)
     setContent(issuesPanel)
+    setupToolbar(OpenIssueInBrowserAction())
   }
 
   private fun centeredLabel(text: String): JPanel {
@@ -138,6 +145,17 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
       }
     })
     return stripePanel
+  }
+
+  private fun setupToolbar(action: AnAction) {
+    val group = SimpleActionGroup()
+    group.add(action)
+    val toolbar = ActionManager.getInstance().createActionToolbar(TOOLBAR_GROUP_ID, group, false)
+    toolbar.setTargetComponent(this)
+    val toolBarBox = Box.createHorizontalBox()
+    toolBarBox.add(toolbar.component)
+    setToolbar(toolBarBox)
+    toolbar.component.isVisible = true
   }
 
   private fun showCard(id: String) {
