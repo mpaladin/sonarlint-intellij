@@ -42,7 +42,7 @@ import org.sonarlint.intellij.actions.OpenTaintVulnerabilityDocumentationAction
 import org.sonarlint.intellij.actions.RefreshTaintVulnerabilitiesAction
 import org.sonarlint.intellij.actions.SonarConfigureProject
 import org.sonarlint.intellij.config.Settings.getGlobalSettings
-import org.sonarlint.intellij.editor.SonarLintHighlighting
+import org.sonarlint.intellij.editor.EditorDecorator
 import org.sonarlint.intellij.issue.vulnerabilities.FoundTaintVulnerabilities
 import org.sonarlint.intellij.issue.vulnerabilities.InvalidBinding
 import org.sonarlint.intellij.issue.vulnerabilities.LocalTaintVulnerability
@@ -56,19 +56,16 @@ import org.sonarlint.intellij.ui.tree.TaintVulnerabilityTree
 import org.sonarlint.intellij.ui.tree.TaintVulnerabilityTreeModelBuilder
 import org.sonarlint.intellij.util.SonarLintUtils.getService
 import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
-import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
-import javax.swing.border.Border
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreeNode
 import javax.swing.tree.TreePath
@@ -141,10 +138,12 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
   }
 
   private fun expandTree() {
-    if (treeBuilder.numberIssues() < 30) {
-      TreeUtil.expandAll(tree)
-    } else {
-      tree.expandRow(0)
+    if (tree.getSelectedNode() == null) {
+      if (treeBuilder.numberIssues() < 30) {
+        TreeUtil.expand(tree, 2)
+      } else {
+        tree.expandRow(0)
+      }
     }
   }
 
@@ -176,15 +175,25 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
   }
 
   fun populate(status: TaintVulnerabilitiesStatus) {
+    val highlighting = getService(project, EditorDecorator::class.java)
     when (status) {
-      is NoBinding -> showCard(NO_BINDING_CARD_ID)
-      is InvalidBinding -> showCard(INVALID_BINDING_CARD_ID)
+      is NoBinding -> {
+        showCard(NO_BINDING_CARD_ID)
+        highlighting.removeHighlights()
+      }
+      is InvalidBinding -> {
+        showCard(INVALID_BINDING_CARD_ID)
+        highlighting.removeHighlights()
+      }
       is FoundTaintVulnerabilities -> {
         if (status.isEmpty()) {
           showCard(NO_ISSUES_CARD_ID)
+          highlighting.removeHighlights()
         } else {
           showCard(TREE_CARD_ID)
+          val selectionPath = tree.selectionPath
           treeBuilder.updateModel(status.byFile)
+          tree.selectionPath = selectionPath
           expandTree()
         }
       }
@@ -193,7 +202,8 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
 
   fun setSelectedVulnerability(vulnerability: LocalTaintVulnerability) {
     val vulnerabilityNode = TreeUtil.findNode((tree.model.root as DefaultMutableTreeNode))
-    { node: DefaultMutableTreeNode? -> node is LocalTaintVulnerabilityNode && node.issue().key() == vulnerability.key() } ?: return
+    { node: DefaultMutableTreeNode? -> node is LocalTaintVulnerabilityNode && node.issue.key() == vulnerability.key() }
+      ?: return
     tree.selectionPath = null
     tree.addSelectionPath(TreePath(vulnerabilityNode.path))
   }
@@ -227,29 +237,28 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
     return splitter
   }
 
-  private fun issueTreeSelectionChanged() {
-    val selectedNodes = tree.getSelectedNodes(LocalTaintVulnerabilityNode::class.java, null)
-    val highlighting = getService(project, SonarLintHighlighting::class.java)
-    if (selectedNodes.isNotEmpty()) {
-      val issue = selectedNodes[0].issue()
-      rulePanel.setRuleKey(issue.ruleKey())
-      highlighting.highlight(issue)
-    } else {
+  private fun updateRulePanelContent() {
+    val highlighting = getService(project, EditorDecorator::class.java)
+    val issue = tree.getIssueFromSelectedNode()
+    if (issue == null) {
       rulePanel.setRuleKey(null)
       highlighting.removeHighlights()
+    } else {
+      rulePanel.setRuleKey(issue.ruleKey())
+      highlighting.highlight(issue)
     }
   }
 
   private fun createTree(): TaintVulnerabilityTree {
     treeBuilder = TaintVulnerabilityTreeModelBuilder()
     tree = TaintVulnerabilityTree(project, treeBuilder.model)
-    tree.addTreeSelectionListener { issueTreeSelectionChanged() }
+    tree.addTreeSelectionListener { updateRulePanelContent() }
     tree.addKeyListener(object : KeyAdapter() {
       override fun keyPressed(e: KeyEvent) {
         if (KeyEvent.VK_ESCAPE == e.keyCode) {
           val highlighting = getService(
             project,
-            SonarLintHighlighting::class.java
+            EditorDecorator::class.java
           )
           highlighting.removeHighlights()
         }
@@ -258,7 +267,7 @@ class TaintVulnerabilitiesPanel(private val project: Project) : SimpleToolWindow
     tree.addFocusListener(object : FocusAdapter() {
       override fun focusGained(e: FocusEvent) {
         if (!e.isTemporary) {
-          issueTreeSelectionChanged()
+          updateRulePanelContent()
         }
       }
     })
